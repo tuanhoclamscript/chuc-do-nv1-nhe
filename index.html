@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thuận buồm xuôi gió - Nguyện ước</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background-color: #050b14;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            position: relative;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        /* Hiệu ứng chữ bay */
+        .wish-text {
+            position: absolute;
+            color: #ffffff;
+            white-space: nowrap;
+            font-weight: bold;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.8), 
+                         0 0 20px rgba(255, 255, 255, 0.5), 
+                         0 0 30px rgba(0, 162, 255, 0.5);
+            animation: flyUp linear infinite;
+            pointer-events: none;
+            opacity: 0;
+        }
+
+        @keyframes flyUp {
+            0% {
+                transform: translateY(105vh) scale(0.8);
+                opacity: 0;
+            }
+            10% {
+                opacity: 0.9;
+            }
+            90% {
+                opacity: 0.9;
+            }
+            100% {
+                transform: translateY(-10vh) scale(1.1);
+                opacity: 0;
+            }
+        }
+
+        /* Hiệu ứng trái tim rơi/bay */
+        .heart {
+            position: absolute;
+            color: #ff3333;
+            font-size: 20px;
+            pointer-events: none;
+            animation: floatHeart linear infinite;
+            filter: drop-shadow(0 0 5px rgba(255, 51, 51, 0.8));
+        }
+
+        @keyframes floatHeart {
+            0% {
+                transform: translateY(105vh) translateX(0) scale(0.5);
+                opacity: 0;
+            }
+            10% { opacity: 0.8; }
+            90% { opacity: 0.8; }
+            100% {
+                transform: translateY(-10vh) translateX(50px) scale(1.2);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <script>
+        // Danh sách các lời chúc hiển thị ngẫu nhiên giống trong image.png
+        const wishes = [
+            "Cùng nhau Đỗ NV1 nha",
+            "Thành công ở hiện tại và tương lai",
+            "Cùng nhau đi tiếp chặng đường tương lai",
+            "Đỗ NV1 nha",
+            "Học viện An ninh thẳng tiến",
+            "Bách Khoa ơi đợi tôi nhé",
+            "9+ Toán Lý Hóa nào!",
+            "Vạn sự hanh thông",
+            "Thuận buồm xuôi gió"
+        ];
+
+        // Hàm tạo chữ bay
+        function createWish() {
+            const wish = document.createElement('div');
+            wish.classList.add('wish-text');
+            
+            // Lấy ngẫu nhiên lời chúc
+            wish.innerText = wishes[Math.floor(Math.random() * wishes.length)];
+            
+            // Ngẫu nhiên vị trí, kích thước, thời gian chạy
+            const randomLeft = Math.random() * 90; // Tránh tràn viền phải
+            const randomDuration = Math.random() * 8 + 6; // Từ 6s đến 14s
+            const randomDelay = Math.random() * 3;
+            const randomSize = Math.random() * 1.5 + 0.8; // Kích thước chữ to nhỏ khác nhau
+
+            wish.style.left = `${randomLeft}%`;
+            wish.style.animationDuration = `${randomDuration}s`;
+            wish.style.animationDelay = `${randomDelay}s`;
+            wish.style.fontSize = `${randomSize}rem`;
+            
+            // Thêm hiệu ứng mờ nhòe xa gần (Z-index giả lập)
+            if (randomSize < 1.2) {
+                wish.style.filter = "blur(1px)";
+                wish.style.opacity = "0.5";
+            }
+
+            document.body.appendChild(wish);
+
+            // Xóa element sau khi chạy xong animation
+            setTimeout(() => {
+                wish.remove();
+            }, (randomDuration + randomDelay) * 1000);
+        }
+
+        // Hàm tạo tim rơi
+        function createHeart() {
+            const heart = document.createElement('div');
+            heart.classList.add('heart');
+            heart.innerHTML = '❤️';
+            
+            const randomLeft = Math.random() * 100;
+            const randomDuration = Math.random() * 5 + 4;
+            
+            heart.style.left = `${randomLeft}%`;
+            heart.style.animationDuration = `${randomDuration}s`;
+            
+            document.body.appendChild(heart);
+            
+            setTimeout(() => {
+                heart.remove();
+            }, randomDuration * 1000);
+        }
+
+        // Tạo vòng lặp xuất hiện liên tục
+        setInterval(createWish, 400);  // Cứ mỗi 0.4s tạo 1 dòng chữ
+        setInterval(createHeart, 300); // Cứ mỗi 0.3s tạo 1 trái tim
+
+        // Khởi tạo trước một số lượng để vào trang là có chữ luôn
+        for(let i=0; i<15; i++) {
+            createWish();
+        }
+    </script>
+</body>
+</html>
