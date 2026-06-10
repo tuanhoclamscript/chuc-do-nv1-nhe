@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Thuận buồm xuôi gió - Nguyện ước</title>
+    <title>NGBATUAN</title>
     <style>
         * {
             margin: 0;
@@ -17,9 +17,12 @@
             position: relative;
             height: 100vh;
             width: 100vw;
+            /* Tạo không gian 3D cho toàn bộ màn hình */
+            perspective: 800px;
+            perspective-origin: 50% 50%;
         }
 
-        /* Hiệu ứng chữ bay */
+        /* Hiệu ứng chữ bay 3D */
         .wish-text {
             position: absolute;
             color: #ffffff;
@@ -28,102 +31,162 @@
             text-shadow: 0 0 10px rgba(255, 255, 255, 0.8), 
                          0 0 20px rgba(255, 255, 255, 0.5), 
                          0 0 30px rgba(0, 162, 255, 0.5);
-            animation: flyUp linear infinite;
             pointer-events: none;
             opacity: 0;
+            transform-style: preserve-3d;
         }
 
-        @keyframes flyUp {
-            0% {
-                transform: translateY(105vh) scale(0.8);
-                opacity: 0;
-            }
-            10% {
-                opacity: 0.9;
-            }
-            90% {
-                opacity: 0.9;
-            }
-            100% {
-                transform: translateY(-10vh) scale(1.1);
-                opacity: 0;
-            }
+        /* Trình phát nhạc custom */
+        #music-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+        }
+        #music-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            padding: 10px 15px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: bold;
+            backdrop-filter: blur(5px);
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        #music-btn:hover {
+            background: rgba(255, 255, 255, 0.4);
+            box-shadow: 0 0 15px rgba(255,255,255,0.5);
+        }
+        .rotating {
+            animation: spin 3s linear infinite;
+        }
+        @keyframes spin {
+            100% { transform: rotate(360deg); }
         }
 
-        /* Hiệu ứng trái tim rơi/bay */
+        /* Hiệu ứng trái tim rơi */
         .heart {
             position: absolute;
             color: #ff3333;
             font-size: 20px;
             pointer-events: none;
-            animation: floatHeart linear infinite;
             filter: drop-shadow(0 0 5px rgba(255, 51, 51, 0.8));
-        }
-
-        @keyframes floatHeart {
-            0% {
-                transform: translateY(105vh) translateX(0) scale(0.5);
-                opacity: 0;
-            }
-            10% { opacity: 0.8; }
-            90% { opacity: 0.8; }
-            100% {
-                transform: translateY(-10vh) translateX(50px) scale(1.2);
-                opacity: 0;
-            }
         }
     </style>
 </head>
 <body>
 
+    <div id="music-container">
+        <button id="music-btn">
+            <span id="music-icon">🎵</span> <span id="music-status">Bật Nhạc</span>
+        </button>
+    </div>
+
+    <audio id="bg-music" loop>
+        <source src="pkl.mp3" type="audio/mpeg">
+        Trình duyệt của bạn không hỗ trợ phát âm thanh.
+    </audio>
+
     <script>
-        // Danh sách các lời chúc hiển thị ngẫu nhiên giống trong image.png
         const wishes = [
             "Cùng nhau Đỗ NV1 nha",
             "Thành công ở hiện tại và tương lai",
             "Cùng nhau đi tiếp chặng đường tương lai",
             "Đỗ NV1 nha",
-            "Học viện An ninh thẳng tiến",
-            "Bách Khoa ơi đợi tôi nhé",
-            "9+ Toán Lý Hóa nào!",
+            "Chúc My đỗ AOF nhé !!"
+            "Chúc Đoan Đỗ UEL",
+            "Chúc Phanh Đỗ NEU , FTU",
+            "9+ Toán Lý Hóa Anh Văn nào!",
+            "Chúc Xuân Hương đỗ FTU",
+            "Chúc Hiếu Đỗ SP Toán",
+            "Chúc Thiên Bảo Đỗ UEH",
+            "Chúc Phúc đỗ HCMUE ",
+            "Chúc Khanh đỗ AJC",
             "Vạn sự hanh thông",
-            "Thuận buồm xuôi gió"
+            "Thuận buồm xuôi gió",
+            "Tui Quý Mọi Người Lắm <3"
         ];
 
-        // Hàm tạo chữ bay
-        function createWish() {
+        // Xử lý bật/tắt nhạc
+        const music = document.getElementById('bg-music');
+        const musicBtn = document.getElementById('music-btn');
+        const musicIcon = document.getElementById('music-icon');
+        const musicStatus = document.getElementById('music-status');
+
+        musicBtn.addEventListener('click', () => {
+            if (music.paused) {
+                music.play().then(() => {
+                    musicStatus.innerText = "Tắt Nhạc";
+                    musicIcon.classList.add('rotating');
+                }).catch(err => console.log("Chưa tương tác với trang: ", err));
+            } else {
+                music.pause();
+                musicStatus.innerText = "Bật Nhạc";
+                musicIcon.classList.remove('rotating');
+            }
+        });
+
+        // Hàm tạo chữ bay xoay 3D
+        function createWish3D() {
             const wish = document.createElement('div');
             wish.classList.add('wish-text');
-            
-            // Lấy ngẫu nhiên lời chúc
             wish.innerText = wishes[Math.floor(Math.random() * wishes.length)];
             
-            // Ngẫu nhiên vị trí, kích thước, thời gian chạy
-            const randomLeft = Math.random() * 90; // Tránh tràn viền phải
-            const randomDuration = Math.random() * 8 + 6; // Từ 6s đến 14s
-            const randomDelay = Math.random() * 3;
-            const randomSize = Math.random() * 1.5 + 0.8; // Kích thước chữ to nhỏ khác nhau
+            // Các thông số ngẫu nhiên cho không gian 3D
+            const randomLeft = Math.random() * 80 + 10; 
+            const randomDuration = Math.random() * 8 + 7; // Thử gian bay từ 7s - 15s
+            
+            // Tọa độ góc xoay 3D ngẫu nhiên ngả nghiêng
+            const rotateX = Math.random() * 40 - 20; // Xoay gật lên xuống (-20deg đến 20deg)
+            const rotateY = Math.random() * 60 - 30; // Xoay nghiêng trái phải (-30deg đến 30deg)
+            const rotateZ = Math.random() * 20 - 10; // Xoay vòng quanh tâm
+            
+            // Độ sâu Z ngẫu nhiên (chữ to ở gần, chữ nhỏ ở xa)
+            const depthZ = Math.random() * 300 - 150; // Từ -150px (xa) đến 150px (gần)
 
             wish.style.left = `${randomLeft}%`;
-            wish.style.animationDuration = `${randomDuration}s`;
-            wish.style.animationDelay = `${randomDelay}s`;
-            wish.style.fontSize = `${randomSize}rem`;
             
-            // Thêm hiệu ứng mờ nhòe xa gần (Z-index giả lập)
-            if (randomSize < 1.2) {
-                wish.style.filter = "blur(1px)";
-                wish.style.opacity = "0.5";
+            // Tạo chuỗi Keyframe Animation động riêng cho mỗi chữ để xoay 3D
+            const animName = `fly3D_${Math.floor(Math.random() * 100000)}`;
+            const styleSheet = document.styleSheets[0];
+            
+            const keyframes = `
+                @keyframes ${animName} {
+                    0% {
+                        transform: translateY(105vh) translateZ(${depthZ}px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) rotateZ(${rotateZ}deg);
+                        opacity: 0;
+                    }
+                    15% { opacity: 0.8; }
+                    85% { opacity: 0.8; }
+                    100% {
+                        transform: translateY(-15vh) translateZ(${depthZ}px) rotateX(${rotateX + 10}deg) rotateY(${rotateY + 15}deg) rotateZ(${rotateZ}deg);
+                        opacity: 0;
+                    }
+                }
+            `;
+            styleSheet.insertRule(keyframes, styleSheet.cssRules.length);
+            
+            wish.style.animation = `${animName} ${randomDuration}s linear forwards`;
+            
+            // Nếu ở quá xa thì làm mờ giả lập hiệu ứng tiêu cự (Blur)
+            if (depthZ < -50) {
+                wish.style.filter = "blur(1.5px)";
+            } else if (depthZ > 50) {
+                wish.style.filter = "blur(0px)";
             }
 
             document.body.appendChild(wish);
 
-            // Xóa element sau khi chạy xong animation
             setTimeout(() => {
                 wish.remove();
-            }, (randomDuration + randomDelay) * 1000);
+            }, randomDuration * 1000);
         }
 
-        // Hàm tạo tim rơi
+        // Hàm tạo tim rơi 3D
         function createHeart() {
             const heart = document.createElement('div');
             heart.classList.add('heart');
@@ -131,26 +194,33 @@
             
             const randomLeft = Math.random() * 100;
             const randomDuration = Math.random() * 5 + 4;
-            
+            const depthZ = Math.random() * 200 - 100;
+
             heart.style.left = `${randomLeft}%`;
-            heart.style.animationDuration = `${randomDuration}s`;
+            
+            const animName = `heart_${Math.floor(Math.random() * 100000)}`;
+            const styleSheet = document.styleSheets[0];
+            const keyframes = `
+                @keyframes ${animName} {
+                    0% { transform: translateY(105vh) translateZ(${depthZ}px) scale(0.6); opacity: 0; }
+                    10% { opacity: 0.8; }
+                    90% { opacity: 0.8; }
+                    100% { transform: translateY(-10vh) translateZ(${depthZ}px) scale(1.2) translateX(${Math.random() * 40 - 20}px); opacity: 0; }
+                }
+            `;
+            styleSheet.insertRule(keyframes, styleSheet.cssRules.length);
+            heart.style.animation = `${animName} ${randomDuration}s linear forwards`;
             
             document.body.appendChild(heart);
-            
-            setTimeout(() => {
-                heart.remove();
-            }, randomDuration * 1000);
+            setTimeout(() => { heart.remove(); }, randomDuration * 1000);
         }
 
-        // Tạo vòng lặp xuất hiện liên tục
-        setInterval(createWish, 400);  // Cứ mỗi 0.4s tạo 1 dòng chữ
-        setInterval(createHeart, 300); // Cứ mỗi 0.3s tạo 1 trái tim
+        // Chạy vòng lặp hiệu ứng
+        setInterval(createWish3D, 500);
+        setInterval(createHeart, 400);
 
-        // Khởi tạo trước một số lượng để vào trang là có chữ luôn
-        for(let i=0; i<15; i++) {
-            createWish();
-        }
+        // Tạo trước vài chữ ban đầu
+        for(let i=0; i<10; i++) { createWish3D(); }
     </script>
 </body>
 </html>
-
