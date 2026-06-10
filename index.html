@@ -3,13 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NGBATUAN</title>
+    <title>Thuận buồm xuôi gió - 3D & Music</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             background-color: #050b14;
             overflow: hidden;
@@ -17,26 +13,33 @@
             position: relative;
             height: 100vh;
             width: 100vw;
-            /* Tạo không gian 3D cho toàn bộ màn hình */
-            perspective: 800px;
+            cursor: grab;
+            user-select: none;
+        }
+        body.dragging { cursor: grabbing; }
+        #scene {
+            position: absolute;
+            inset: 0;
+            perspective: 900px;
             perspective-origin: 50% 50%;
         }
-
-        /* Hiệu ứng chữ bay 3D */
+        #world {
+            position: absolute;
+            inset: 0;
+            transform-style: preserve-3d;
+        }
         .wish-text {
             position: absolute;
             color: #ffffff;
             white-space: nowrap;
             font-weight: bold;
-            text-shadow: 0 0 10px rgba(255, 255, 255, 0.8), 
-                         0 0 20px rgba(255, 255, 255, 0.5), 
-                         0 0 30px rgba(0, 162, 255, 0.5);
+            text-shadow: 0 0 10px rgba(255,255,255,0.8),
+                         0 0 20px rgba(255,255,255,0.5),
+                         0 0 30px rgba(0,162,255,0.5);
             pointer-events: none;
             opacity: 0;
             transform-style: preserve-3d;
         }
-
-        /* Trình phát nhạc custom */
         #music-container {
             position: fixed;
             top: 20px;
@@ -44,9 +47,9 @@
             z-index: 9999;
         }
         #music-btn {
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(255,255,255,0.2);
             color: white;
-            border: 2px solid rgba(255, 255, 255, 0.5);
+            border: 2px solid rgba(255,255,255,0.5);
             padding: 10px 15px;
             border-radius: 30px;
             cursor: pointer;
@@ -57,170 +60,236 @@
             align-items: center;
             gap: 8px;
         }
-        #music-btn:hover {
-            background: rgba(255, 255, 255, 0.4);
-            box-shadow: 0 0 15px rgba(255,255,255,0.5);
+        #music-btn:hover { background: rgba(255,255,255,0.4); box-shadow: 0 0 15px rgba(255,255,255,0.5); }
+        .rotating { animation: spin 3s linear infinite; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        #hint {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255,255,255,0.45);
+            font-size: 13px;
+            pointer-events: none;
+            z-index: 9999;
+            transition: opacity 1.2s;
         }
-        .rotating {
-            animation: spin 3s linear infinite;
-        }
-        @keyframes spin {
-            100% { transform: rotate(360deg); }
-        }
-
-        /* Hiệu ứng trái tim rơi */
         .heart {
             position: absolute;
-            color: #ff3333;
             font-size: 20px;
             pointer-events: none;
-            filter: drop-shadow(0 0 5px rgba(255, 51, 51, 0.8));
+            filter: drop-shadow(0 0 5px rgba(255,51,51,0.8));
+        }
+        .clover {
+            position: absolute;
+            pointer-events: none;
+            opacity: 0;
         }
     </style>
 </head>
 <body>
 
-    <div id="music-container">
-        <button id="music-btn">
-            <span id="music-icon">🎵</span> <span id="music-status">Bật Nhạc</span>
-        </button>
-    </div>
+<div id="autoplay-overlay" style="position:fixed;inset:0;z-index:99999;cursor:pointer;background:transparent;"></div>
 
-    <audio id="bg-music" loop>
-        <source src="pkl.mp3" type="audio/mpeg">
-        Trình duyệt của bạn không hỗ trợ phát âm thanh.
-    </audio>
+<div id="music-container">
+    <button id="music-btn">
+        <span id="music-icon">🎵</span>
+        <span id="music-status">Bật Nhạc</span>
+    </button>
+</div>
 
-    <script>
-        const wishes = [
-            "Cùng nhau Đỗ NV1 nha",
-            "Thành công ở hiện tại và tương lai",
-            "Cùng nhau đi tiếp chặng đường tương lai",
-            "Đỗ NV1 nha",
-            "Chúc My đỗ AOF nhé !!"
-            "Chúc Đoan Đỗ UEL",
-            "Chúc Phanh Đỗ NEU , FTU",
-            "9+ Toán Lý Hóa Anh Văn nào!",
-            "Chúc Xuân Hương đỗ FTU",
-            "Chúc Hiếu Đỗ SP Toán",
-            "Chúc Thiên Bảo Đỗ UEH",
-            "Chúc Phúc đỗ HCMUE ",
-            "Chúc Khanh đỗ AJC",
-            "Vạn sự hanh thông",
-            "Thuận buồm xuôi gió",
-            "Tui Quý Mọi Người Lắm <3"
-        ];
+<div id="hint">🖱️ Kéo để xoay không gian 3D</div>
 
-        // Xử lý bật/tắt nhạc
-        const music = document.getElementById('bg-music');
-        const musicBtn = document.getElementById('music-btn');
-        const musicIcon = document.getElementById('music-icon');
-        const musicStatus = document.getElementById('music-status');
+<div id="scene"><div id="world"></div></div>
 
-        musicBtn.addEventListener('click', () => {
-            if (music.paused) {
-                music.play().then(() => {
-                    musicStatus.innerText = "Tắt Nhạc";
-                    musicIcon.classList.add('rotating');
-                }).catch(err => console.log("Chưa tương tác với trang: ", err));
-            } else {
-                music.pause();
-                musicStatus.innerText = "Bật Nhạc";
-                musicIcon.classList.remove('rotating');
-            }
-        });
+<audio id="bg-music" loop>
+    <source src="pkl.mp3" type="audio/mpeg">
+</audio>
 
-        // Hàm tạo chữ bay xoay 3D
-        function createWish3D() {
-            const wish = document.createElement('div');
-            wish.classList.add('wish-text');
-            wish.innerText = wishes[Math.floor(Math.random() * wishes.length)];
-            
-            // Các thông số ngẫu nhiên cho không gian 3D
-            const randomLeft = Math.random() * 80 + 10; 
-            const randomDuration = Math.random() * 8 + 7; // Thử gian bay từ 7s - 15s
-            
-            // Tọa độ góc xoay 3D ngẫu nhiên ngả nghiêng
-            const rotateX = Math.random() * 40 - 20; // Xoay gật lên xuống (-20deg đến 20deg)
-            const rotateY = Math.random() * 60 - 30; // Xoay nghiêng trái phải (-30deg đến 30deg)
-            const rotateZ = Math.random() * 20 - 10; // Xoay vòng quanh tâm
-            
-            // Độ sâu Z ngẫu nhiên (chữ to ở gần, chữ nhỏ ở xa)
-            const depthZ = Math.random() * 300 - 150; // Từ -150px (xa) đến 150px (gần)
+<script>
+    const wishes = [
+        "Cùng nhau Đỗ NV1 nha",
+        "Thành công ở hiện tại và tương lai",
+        "Cùng nhau đi tiếp chặng đường tương lai",
+        "Đỗ NV1 nha",
+        "Chúc My đỗ AOF nhé !!",
+        "Chúc Đoan Đỗ UEL",
+        "Chúc Phanh Đỗ NEU , FTU",
+        "9+ Toán Lý Hóa Anh Văn nào!",
+        "Chúc Xuân Hương đỗ FTU",
+        "Chúc Hiếu Đỗ SP Toán",
+        "Chúc Thiên Bảo Đỗ UEH",
+        "Chúc Phúc đỗ HCMUE",
+        "Chúc Khanh đỗ AJC",
+        "Vạn sự hanh thông",
+        "Thuận buồm xuôi gió",
+        "Tui Quý Mọi Người Lắm <3"
+    ];
 
-            wish.style.left = `${randomLeft}%`;
-            
-            // Tạo chuỗi Keyframe Animation động riêng cho mỗi chữ để xoay 3D
-            const animName = `fly3D_${Math.floor(Math.random() * 100000)}`;
-            const styleSheet = document.styleSheets[0];
-            
-            const keyframes = `
-                @keyframes ${animName} {
-                    0% {
-                        transform: translateY(105vh) translateZ(${depthZ}px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) rotateZ(${rotateZ}deg);
-                        opacity: 0;
-                    }
-                    15% { opacity: 0.8; }
-                    85% { opacity: 0.8; }
-                    100% {
-                        transform: translateY(-15vh) translateZ(${depthZ}px) rotateX(${rotateX + 10}deg) rotateY(${rotateY + 15}deg) rotateZ(${rotateZ}deg);
-                        opacity: 0;
-                    }
-                }
-            `;
-            styleSheet.insertRule(keyframes, styleSheet.cssRules.length);
-            
-            wish.style.animation = `${animName} ${randomDuration}s linear forwards`;
-            
-            // Nếu ở quá xa thì làm mờ giả lập hiệu ứng tiêu cự (Blur)
-            if (depthZ < -50) {
-                wish.style.filter = "blur(1.5px)";
-            } else if (depthZ > 50) {
-                wish.style.filter = "blur(0px)";
-            }
+    /* ── Nhạc ── */
+    const music = document.getElementById('bg-music');
+    const musicBtn = document.getElementById('music-btn');
+    const musicIcon = document.getElementById('music-icon');
+    const musicStatus = document.getElementById('music-status');
+    const overlay = document.getElementById('autoplay-overlay');
 
-            document.body.appendChild(wish);
+    function startMusic() {
+        music.play().then(() => {
+            musicStatus.innerText = "Tắt Nhạc";
+            musicIcon.classList.add('rotating');
+        }).catch(e => console.log(e));
+    }
+    function handleFirstInteraction() {
+        overlay.remove();
+        startMusic();
+        document.removeEventListener('click', handleFirstInteraction);
+        document.removeEventListener('touchstart', handleFirstInteraction);
+    }
+    overlay.addEventListener('click', handleFirstInteraction);
+    document.addEventListener('touchstart', handleFirstInteraction, { once: true });
+    music.play().then(() => { overlay.remove(); musicStatus.innerText = "Tắt Nhạc"; musicIcon.classList.add('rotating'); }).catch(() => {});
 
-            setTimeout(() => {
-                wish.remove();
-            }, randomDuration * 1000);
-        }
+    musicBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        if (music.paused) { startMusic(); }
+        else { music.pause(); musicStatus.innerText = "Bật Nhạc"; musicIcon.classList.remove('rotating'); }
+    });
 
-        // Hàm tạo tim rơi 3D
-        function createHeart() {
-            const heart = document.createElement('div');
-            heart.classList.add('heart');
-            heart.innerHTML = '❤️';
-            
-            const randomLeft = Math.random() * 100;
-            const randomDuration = Math.random() * 5 + 4;
-            const depthZ = Math.random() * 200 - 100;
+    /* ── Xoay 3D ── */
+    const world = document.getElementById('world');
+    let rotX = -10, rotY = 0;
+    let isDragging = false, lastX = 0, lastY = 0;
 
-            heart.style.left = `${randomLeft}%`;
-            
-            const animName = `heart_${Math.floor(Math.random() * 100000)}`;
-            const styleSheet = document.styleSheets[0];
-            const keyframes = `
-                @keyframes ${animName} {
-                    0% { transform: translateY(105vh) translateZ(${depthZ}px) scale(0.6); opacity: 0; }
-                    10% { opacity: 0.8; }
-                    90% { opacity: 0.8; }
-                    100% { transform: translateY(-10vh) translateZ(${depthZ}px) scale(1.2) translateX(${Math.random() * 40 - 20}px); opacity: 0; }
-                }
-            `;
-            styleSheet.insertRule(keyframes, styleSheet.cssRules.length);
-            heart.style.animation = `${animName} ${randomDuration}s linear forwards`;
-            
-            document.body.appendChild(heart);
-            setTimeout(() => { heart.remove(); }, randomDuration * 1000);
-        }
+    function applyRot() {
+        world.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg)`;
+    }
+    applyRot();
 
-        // Chạy vòng lặp hiệu ứng
-        setInterval(createWish3D, 500);
-        setInterval(createHeart, 400);
+    document.addEventListener('mousedown', e => {
+        if (e.target.closest('#music-container')) return;
+        isDragging = true; lastX = e.clientX; lastY = e.clientY;
+        document.body.classList.add('dragging');
+    });
+    document.addEventListener('mousemove', e => {
+        if (!isDragging) return;
+        rotY += (e.clientX - lastX) * 0.35;
+        rotX -= (e.clientY - lastY) * 0.35;
+        rotX = Math.max(-65, Math.min(65, rotX));
+        lastX = e.clientX; lastY = e.clientY;
+        applyRot();
+    });
+    document.addEventListener('mouseup', () => { isDragging = false; document.body.classList.remove('dragging'); });
 
-        // Tạo trước vài chữ ban đầu
-        for(let i=0; i<10; i++) { createWish3D(); }
-    </script>
+    document.addEventListener('touchstart', e => {
+        if (e.target.closest('#music-container')) return;
+        isDragging = true; lastX = e.touches[0].clientX; lastY = e.touches[0].clientY;
+    }, { passive: true });
+    document.addEventListener('touchmove', e => {
+        if (!isDragging) return;
+        rotY += (e.touches[0].clientX - lastX) * 0.35;
+        rotX -= (e.touches[0].clientY - lastY) * 0.35;
+        rotX = Math.max(-65, Math.min(65, rotX));
+        lastX = e.touches[0].clientX; lastY = e.touches[0].clientY;
+        applyRot();
+    }, { passive: true });
+    document.addEventListener('touchend', () => { isDragging = false; });
+
+    setTimeout(() => { document.getElementById('hint').style.opacity = '0'; }, 4500);
+
+    /* ── Keyframe helper ── */
+    const styleEl = document.createElement('style');
+    document.head.appendChild(styleEl);
+    const sheet = styleEl.sheet;
+    let kfId = 0;
+    function addKf(css) {
+        const name = 'kf' + (kfId++);
+        try { sheet.insertRule(`@keyframes ${name} { ${css} }`, sheet.cssRules.length); } catch(e) {}
+        return name;
+    }
+
+    /* ── Chữ bay ── */
+    function createWish3D() {
+        const el = document.createElement('div');
+        el.classList.add('wish-text');
+        el.innerText = wishes[Math.floor(Math.random() * wishes.length)];
+        const left = Math.random() * 80 + 10;
+        const dur = Math.random() * 8 + 7;
+        const rX = Math.random() * 40 - 20, rY = Math.random() * 60 - 30, rZ = Math.random() * 20 - 10;
+        const dZ = Math.random() * 300 - 150;
+        el.style.cssText = `left:${left}%;font-size:${Math.random()*10+14}px;`;
+        if (dZ < -50) el.style.filter = 'blur(1.5px)';
+        const n = addKf(`
+            0%   {transform:translateY(105vh) translateZ(${dZ}px) rotateX(${rX}deg) rotateY(${rY}deg) rotateZ(${rZ}deg);opacity:0}
+            15%  {opacity:.85}
+            85%  {opacity:.85}
+            100% {transform:translateY(-15vh) translateZ(${dZ}px) rotateX(${rX+10}deg) rotateY(${rY+15}deg) rotateZ(${rZ}deg);opacity:0}
+        `);
+        el.style.animation = `${n} ${dur}s linear forwards`;
+        world.appendChild(el);
+        setTimeout(() => el.remove(), dur * 1000);
+    }
+
+    /* ── Tim ── */
+    function createHeart() {
+        const el = document.createElement('div');
+        el.classList.add('heart');
+        el.textContent = '❤️';
+        const left = Math.random() * 100, dur = Math.random() * 5 + 4;
+        const dZ = Math.random() * 200 - 100, dX = Math.random() * 40 - 20;
+        el.style.left = left + '%';
+        const n = addKf(`
+            0%   {transform:translateY(105vh) translateZ(${dZ}px) scale(.6);opacity:0}
+            10%  {opacity:.85}
+            90%  {opacity:.85}
+            100% {transform:translateY(-10vh) translateZ(${dZ}px) scale(1.2) translateX(${dX}px);opacity:0}
+        `);
+        el.style.animation = `${n} ${dur}s linear forwards`;
+        world.appendChild(el);
+        setTimeout(() => el.remove(), dur * 1000);
+    }
+
+    /* ── Cỏ 4 lá ── */
+    function makeSVG(color, s) {
+        const r = s / 4, c = s / 2;
+        return `<svg xmlns="http://www.w3.org/2000/svg" width="${s}" height="${s}" viewBox="0 0 ${s} ${s}">
+            <circle cx="${c}" cy="${c-r}" r="${r}" fill="${color}"/>
+            <circle cx="${c+r}" cy="${c}" r="${r}" fill="${color}"/>
+            <circle cx="${c}" cy="${c+r}" r="${r}" fill="${color}"/>
+            <circle cx="${c-r}" cy="${c}" r="${r}" fill="${color}"/>
+            <ellipse cx="${c}" cy="${c+r*1.05}" rx="${r*.22}" ry="${r*.9}" fill="${color}"/>
+        </svg>`;
+    }
+    const cloverColors = ['#2ecc71','#27ae60','#a8e063','#56ab2f','#1abc9c'];
+
+    function createClover() {
+        const el = document.createElement('div');
+        el.classList.add('clover');
+        const s = Math.random() * 26 + 16;
+        const color = cloverColors[Math.floor(Math.random() * cloverColors.length)];
+        el.innerHTML = makeSVG(color, s);
+        const left = Math.random() * 95, dur = Math.random() * 7 + 6;
+        const dZ = Math.random() * 260 - 130;
+        const spin = (Math.random() > .5 ? 360 : -360) * (Math.random() * 2 + 1 | 0);
+        const dX = Math.random() * 60 - 30;
+        el.style.left = left + '%';
+        if (dZ < -50) el.style.filter = 'blur(1px)';
+        const n = addKf(`
+            0%   {transform:translateY(105vh) translateZ(${dZ}px) rotate(0deg);opacity:0}
+            12%  {opacity:.9}
+            88%  {opacity:.9}
+            100% {transform:translateY(-12vh) translateZ(${dZ}px) rotate(${spin}deg) translateX(${dX}px);opacity:0}
+        `);
+        el.style.animation = `${n} ${dur}s ease-in-out forwards`;
+        world.appendChild(el);
+        setTimeout(() => el.remove(), dur * 1000);
+    }
+
+    /* ── Start ── */
+    setInterval(createWish3D, 500);
+    setInterval(createHeart, 400);
+    setInterval(createClover, 350);
+    for (let i = 0; i < 10; i++) createWish3D();
+    for (let i = 0; i < 8; i++) createClover();
+</script>
 </body>
 </html>
